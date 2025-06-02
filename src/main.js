@@ -3,13 +3,12 @@ import kaplay from "https://unpkg.com/kaplay@3001/dist/kaplay.mjs";
 kaplay ({
     width: 1280,
     height: 720,
-    letterbox: true,
     debug: false, 
+    stretch: true,
     pixelDensity: window.devicePixelRatio,
 });
 
 const floor_height = 60;
-const speed = 500;
 
 setBackground(62, 217, 237);
 loadSprite("cat", "assets/cat.png", {
@@ -36,7 +35,10 @@ loadSound("sound", "assets/oo-ee-a-ea.mp3");
 scene("game", () => {
     // define gravity
     setGravity(1500);
-    
+    let speed = 100;
+    loop(1, () => {
+        speed += 20;
+    });
 
     // add a game object to screen
     const player = add([
@@ -44,12 +46,12 @@ scene("game", () => {
         pos(80, 40),
         area(),
         body(),
-        scale(0.4),
+        scale(0.5),
     ]);
 
     // floor
-    add([
-        rect(width(), floor_height), // why is the width not changing
+    const floor = add([
+        rect(width(), floor_height), 
         outline(1.2),
         pos(0, height()),
         anchor("botleft"),
@@ -58,12 +60,19 @@ scene("game", () => {
         color(8, 201, 118),
     ]);
 
+    // // resizes the floor so it fits screen
+    // onResize(() => {
+    //     floor.width = width();
+    //     floor.pos = vec2(0, height());
+    //     fitToScreen();
+    // });
+
     // so sound stops once its on the ground
     let jumpSound = null;
 
     function jump() {
         if (player.isGrounded()) {
-            player.jump(650);
+            player.jump(600);
             player.play("jump");
 
             if (jumpSound && !jumpSound.stopped) {
@@ -89,22 +98,37 @@ scene("game", () => {
         }
     });
 
-    function spawnObstacle() {
-        // add obstacle 
-        add([
+    // make water as an obstacle
+    function makeWater() {
+        return add([
             sprite("water"),
             area(),
-            scale(0.175),
+            scale(0.14),
             pos(width(), height() - floor_height),
             anchor("botleft"),
-            move(LEFT, speed),
             offscreen({ destroy: true }),
             "obstacle",
         ]);
-
-        // wait a random amount of time to spawn next tree
-        wait(rand(1, 2), spawnObstacle);
     }
+
+    const spawnObstacle = () => {
+        const water = makeWater(vec2(1280, 595));
+        water.onUpdate(() => {
+        if (speed < 3000) {
+            water.move(-(speed + 300), 0);
+            return;
+        }
+        water.move(-speed, 0);
+        });
+
+        water.onExitScreen(() => {
+        destroy(water);
+        });
+
+        const waitTime = rand(1, 2.5);
+
+        wait(waitTime, spawnObstacle);
+    };
 
     spawnObstacle();
 
